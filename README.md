@@ -53,11 +53,11 @@ This repository contains a end-to-end solution to show how Dynamic AES 126 encry
    **To realize this, I created two clients in IdentityServer:**
 
    1. A "normal" employee, called **staff**. This employee can view all videos in the scope "Staff". 
-   * Username: StaffName
-   * Password: pdw1
+    * Username: StaffName
+    * Password: pdw1
    2.  A employee working in the **management**. This employee can only view videos in the scope "Management". Of course you can configure the solution to show all videos to a employee in the management. 
-   * Username: ManagementName
-   * Password: pwd2
+    * Username: ManagementName
+    * Password: pwd2
 
 **You should recognize:**
 
