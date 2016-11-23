@@ -33,23 +33,30 @@ namespace AMSsetup
         private static readonly string _clientGroupStaff = (ConfigurationManager.AppSettings["Staff"]);
         private static readonly string _clientGroupManagement = (ConfigurationManager.AppSettings["Management"]);
 
-        //The Video Files that you want to upload 
-        private static readonly string _staffVideoFile = @"C:\Users\juliajau\Desktop\catsforStaff.mp4";
-        private static readonly string _mgmtVideoFile = @"C:\Users\juliajau\Desktop\buildingforManagement.mp4";
+        //The Video Files that you want to use 
+        private static readonly string _staffVideoFile = ConfigurationManager.AppSettings["StaffVideoFile"];
+        private static readonly string _mgmtVideoFile = ConfigurationManager.AppSettings["ManagementVideoFile"];
+        private static readonly string _upload = ConfigurationManager.AppSettings["Upload"];
 
         static void Main(string[] args)
         {
             Initialize();
-            Console.Title = "Azure Media Services Setup";
-
             SelectMediaServicesAccount();
 
-            IAsset assetStaff = UploadFileAndCreateAsset(_staffVideoFile); //Upload Asset 1
-            IAsset assetManagement = UploadFileAndCreateAsset(_mgmtVideoFile); //Upload Asset 2
+            //Upload assets or use existing ones
+            IAsset assetStaff;
+            IAsset assetManagement;
 
-            //Or use existing assets
-            //IAsset assetStaff = GetAsset("nb:cid:UUID:e0b75639-4f6e-41d8-8089-2eaf0f1bd311");
-            //IAsset assetManagement = GetAsset("nb:cid:UUID:8e7255dd-39cf-4b61-b578-74aa279ecba1");
+            if (_upload == "true")
+            {
+                assetStaff = UploadFileAndCreateAsset(_staffVideoFile); //Upload Asset 1
+                assetManagement = UploadFileAndCreateAsset(_mgmtVideoFile); //Upload Asset 2
+            }
+            else
+            { //Or use already existing assets (specify the ID of the asset in your app.config, e.g. StaffVideoFile = "nb:cid:UUID:8e7255dd-39cf-4b61-b578-74aa279ecba1"
+                assetStaff = GetAsset(_staffVideoFile);
+                assetManagement = GetAsset(_mgmtVideoFile);
+            }
 
             //Encode Assets
             IAsset encodedassetStaff = EncodeToAdaptiveBitrateMP4s(assetStaff);
@@ -69,6 +76,7 @@ namespace AMSsetup
 
         private static void Initialize()
         {
+            Console.Title = "Azure Media Services Setup";
             _videoDB = new VideoDB();
             _videoDB.videos = new List<Video>();
         }
