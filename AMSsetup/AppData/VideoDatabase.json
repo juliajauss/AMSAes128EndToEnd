@@ -1,0 +1,30 @@
+{
+  "videos": [
+    {
+      "allowedClientGroup": "Staff",
+      "assetFile": "https://amsscenariodiag372.blob.core.windows.net/asset-128e2fea-66a5-47c1-a20d-2bceb7fc1da3/catsforStaff.ism?sv=2012-02-12&sr=c&si=75bf0ffc-6839-41d5-a838-4aa39017ea18&sig=sJLgLwTuiN%2B8sjsPZX7rP6eRQdKdMjO41pbFwj97AkM%3D&se=2016-12-22T07:36:59Z",
+      "filename": "catsforStaff.mp4_Adaptive Bitrate MP4",
+      "hlsUri": "http://julesmediaservice.streaming.mediaservices.windows.net/877002e1-41bb-4e0d-9efd-182c45ac6ee6/catsforStaff.ism/manifest(format=m3u8-aapl)",
+      "id": "nb:cid:UUID:128e2fea-66a5-47c1-a20d-2bceb7fc1da3",
+      "key": "eaef1001-0702-4124-9fdf-3faea3e56399",
+      "manifest": "http://julesmediaservice.streaming.mediaservices.windows.net/877002e1-41bb-4e0d-9efd-182c45ac6ee6/catsforStaff.ism/manifest",
+      "mpegdashUri": "http://julesmediaservice.streaming.mediaservices.windows.net/877002e1-41bb-4e0d-9efd-182c45ac6ee6/catsforStaff.ism/manifest(format=mpd-time-csf)",
+      "primaryVerificationKey": "yLUn9dp8IGeosxy14Com0nUt5Wvi/YLV48agTlPoWAFMcH2dvAh307UX7Pi0tS5W4vS85OcqTAfuVvVFjNfybg==",
+      "smoothStreamingUri": "http://julesmediaservice.streaming.mediaservices.windows.net/877002e1-41bb-4e0d-9efd-182c45ac6ee6/catsforStaff.ism/manifest",
+      "VideoTitle": null
+    },
+    {
+      "key": "587ae307-a37a-4bce-921a-4ed0f889123e",
+      "primaryVerificationKey": "yLUn9dp8IGeosxy14Com0nUt5Wvi/YLV48agTlPoWAFMcH2dvAh307UX7Pi0tS5W4vS85OcqTAfuVvVFjNfybg==",
+      "assetFile": "https://amsscenariodiag372.blob.core.windows.net/asset-36cee8e8-7182-4ddd-bedc-167b6c3ec0f3/buildingforManagement.ism?sv=2012-02-12&sr=c&si=77b39741-c02a-4976-8232-879328203aa2&sig=UsU8%2FUtG9qDJETe%2FKQFOvbICQoPXRBMacd3WrM%2BbAws%3D&se=2016-12-22T07:37:44Z",
+      "manifest": "http://julesmediaservice.streaming.mediaservices.windows.net/1d963a4d-597a-4cf7-8776-085a951585ea/buildingforManagement.ism/manifest",
+      "VideoTitle": null,
+      "allowedClientGroup": "Management",
+      "id": "nb:cid:UUID:36cee8e8-7182-4ddd-bedc-167b6c3ec0f3",
+      "filename": "buildingforManagement.mp4_Adaptive Bitrate MP4",
+      "hlsUri": "http://julesmediaservice.streaming.mediaservices.windows.net/1d963a4d-597a-4cf7-8776-085a951585ea/buildingforManagement.ism/manifest(format=m3u8-aapl)",
+      "mpegdashUri": "http://julesmediaservice.streaming.mediaservices.windows.net/1d963a4d-597a-4cf7-8776-085a951585ea/buildingforManagement.ism/manifest(format=mpd-time-csf)",
+      "smoothStreamingUri": "http://julesmediaservice.streaming.mediaservices.windows.net/1d963a4d-597a-4cf7-8776-085a951585ea/buildingforManagement.ism/manifest"
+    }
+  ]
+}

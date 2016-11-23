@@ -1,0 +1,34 @@
+﻿{
+	"$schema": "http://json-schema.org/draft-04/schema",
+	"title": "JSON Schema for my JSON file format",
+
+	"type": "object",
+
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "This is the name of the file."
+    },
+    "hlsUri": {
+      "type": "string",
+      "description": "This is the HLS Uri.",
+      "minItems": 1
+    },
+    "mpegDashUri": {
+      "type": "string",
+      "description": "This is the MPEG-DASH Uri.",
+      "minItems": 1
+    },
+    "smoothStreamingUri": {
+      "type": "string",
+      "description": "This is the Smooth Streaming Uri.",
+      "minItems": 1
+    },
+    "progressiveDownloadUris": {
+      "type": "array",
+      "description": "This are the Uris for the progessive Download.",
+      "minItems": 1
+    }
+  }
+  }
+}

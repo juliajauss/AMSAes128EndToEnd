@@ -1,0 +1,35 @@
+﻿@using IdentityServerAPI.Models
+@model LoginViewModel
+@{
+    ViewBag.Title = "Azure Media Services Demo Application";
+}
+
+<div class="jumbotron">
+    <h1>@ViewBag.Title</h1>
+    <p class="lead">This is a demo application to display how you can integrate a Video in your CMS/website from Azure Media Services. </p>
+</div>
+
+    <section id="loginForm">
+        @using (Html.BeginForm("Login", "Home", FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+            {
+            <h4>Use one of two accounts: "StaffName" or "ManagementName".</h4>
+                <div class="form-group">
+                    @Html.LabelFor(m => m.Email, new { @class = "col-md-2 control-label" })
+                    <div class="col-md-10">
+                        @Html.TextBoxFor(m => m.Email, new { @class = "form-control" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    @Html.LabelFor(m => m.Password, new { @class = "col-md-2 control-label" })
+                    <div class="col-md-10">
+                        @Html.PasswordFor(m => m.Password, new { @class = "form-control" })
+                    </div>
+                </div>
+    
+                <div class="form-group">
+                    <div class="col-md-offset-2 col-md-10">
+                        <input type="submit" value="Login" class="btn btn-default" />
+                    </div>
+                </div>
+        }
+    </section>
