@@ -1,0 +1,30 @@
+{
+  "videos": [
+    {
+      "key": "891d7f4d-7ab6-4e58-869d-d215560442dd",
+      "primaryVerificationKey": "yLUn9dp8IGeosxy14Com0nUt5Wvi/YLV48agTlPoWAFMcH2dvAh307UX7Pi0tS5W4vS85OcqTAfuVvVFjNfybg==",
+      "assetFile": "https://amsscenariodiag372.blob.core.windows.net/asset-bd01db94-59f5-45c3-ae52-7a857d824cf1/ams101.ism?sv=2012-02-12&sr=c&si=20e74b34-d478-4908-af1a-572b47d22bbc&sig=Z9MgKEs0T%2F4JjR9gTaxvHZLL7aC8vIW%2BQi2%2Fw7N232Q%3D&se=2016-12-25T09:31:32Z",
+      "manifest": "http://julesmediaservice.streaming.mediaservices.windows.net/ad2b7915-ac1c-4e1e-94ab-c3b65a99f8f8/ams101.ism/manifest",
+      "VideoTitle": "ams101.mp4_Adaptive Bitrate MP4",
+      "allowedClientGroup": "Staff",
+      "id": "nb:cid:UUID:bd01db94-59f5-45c3-ae52-7a857d824cf1",
+      "filename": "ams101.mp4_Adaptive Bitrate MP4",
+      "hlsUri": "http://julesmediaservice.streaming.mediaservices.windows.net/ad2b7915-ac1c-4e1e-94ab-c3b65a99f8f8/ams101.ism/manifest(format=m3u8-aapl)",
+      "mpegdashUri": "http://julesmediaservice.streaming.mediaservices.windows.net/ad2b7915-ac1c-4e1e-94ab-c3b65a99f8f8/ams101.ism/manifest(format=mpd-time-csf)",
+      "smoothStreamingUri": "http://julesmediaservice.streaming.mediaservices.windows.net/ad2b7915-ac1c-4e1e-94ab-c3b65a99f8f8/ams101.ism/manifest"
+    },
+    {
+      "allowedClientGroup": "Management",
+      "assetFile": "https://amsscenariodiag372.blob.core.windows.net/asset-c84f5f1a-8ba0-4495-8a47-e7e8def1fcf2/ams102.ism?sv=2012-02-12&sr=c&si=0f228d86-d9d6-4540-85d7-d28c10c2dc3c&sig=fZm3Z%2FUDgr1eHkgDU9flyE7v%2FLXQrCXakd2P3zpy1b8%3D&se=2016-12-25T09:18:52Z",
+      "filename": "ams102.mp4_Adaptive Bitrate MP4",
+      "hlsUri": "http://julesmediaservice.streaming.mediaservices.windows.net/7558da2a-4fc1-4ba0-ab28-89fabfcd025b/ams102.ism/manifest(format=m3u8-aapl)",
+      "id": "nb:cid:UUID:c84f5f1a-8ba0-4495-8a47-e7e8def1fcf2",
+      "key": "ba7d7a56-573b-4331-b503-2ea6009dcba5",
+      "manifest": "http://julesmediaservice.streaming.mediaservices.windows.net/7558da2a-4fc1-4ba0-ab28-89fabfcd025b/ams102.ism/manifest",
+      "mpegdashUri": "http://julesmediaservice.streaming.mediaservices.windows.net/7558da2a-4fc1-4ba0-ab28-89fabfcd025b/ams102.ism/manifest(format=mpd-time-csf)",
+      "primaryVerificationKey": "yLUn9dp8IGeosxy14Com0nUt5Wvi/YLV48agTlPoWAFMcH2dvAh307UX7Pi0tS5W4vS85OcqTAfuVvVFjNfybg==",
+      "smoothStreamingUri": "http://julesmediaservice.streaming.mediaservices.windows.net/7558da2a-4fc1-4ba0-ab28-89fabfcd025b/ams102.ism/manifest",
+      "VideoTitle": "ams102.mp4_Adaptive Bitrate MP4"
+    }
+  ]
+}

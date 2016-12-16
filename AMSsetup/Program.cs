@@ -1,201 +1,247 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using Microsoft.WindowsAzure.MediaServices.Client;
-using Microsoft.WindowsAzure.MediaServices.Client.ContentKeyAuthorization;
-using System.Configuration;
-using System.Threading;
-using Newtonsoft.Json;
-using Microsoft.WindowsAzure.MediaServices.Client.DynamicEncryption;
-using System.Security.Cryptography;
-using IdentityServerAPI.Models;
-using System.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
-
-namespace AMSsetup
+﻿namespace AMSsetup
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.IO;
+    using Microsoft.WindowsAzure.MediaServices.Client;
+    using Microsoft.WindowsAzure.MediaServices.Client.ContentKeyAuthorization;
+    using System.Configuration;
+    using System.Threading;
+    using Microsoft.WindowsAzure.MediaServices.Client.DynamicEncryption;
+    using System.Security.Cryptography;
+    using IdentityServerAPI.Models;
+    using System.Threading.Tasks;
+
+    class Settings
+    {
+        public string Issuer { get; set; }
+        public byte[] primaryVerificationKey { get; set; }
+    }
+
+    class VideoToPublish
+    {
+        public string Filename { get; set; }
+        public string Audience { get; set; }
+    }
+
     class Program
     {
-        private static readonly string _mediaServicesAccountName = ConfigurationManager.AppSettings["MediaServicesAccountName"];
-        private static readonly string _mediaServicesAccountKey = ConfigurationManager.AppSettings["MediaServicesAccountKey"];
-        static string _storageAccountName = ConfigurationManager.AppSettings["MediaServicesStorageAccountName"];
-        static string _storageAccountKey = ConfigurationManager.AppSettings["MediaServicesStorageAccountKey"];
-        private static CloudMediaContext _context = null;
-        private static MediaServicesCredentials _cachedCredentials = null;
-        static VideoDB _videoDB;
-        static string _primaryVerificationKey = ConfigurationManager.AppSettings["PrimaryVerificationKey"];
-
-        // A Uri describing the issuer of the token. Must match the value in the token for the token to be considered valid.
-        private static readonly Uri _sampleIssuer = new Uri(ConfigurationManager.AppSettings["Issuer"]);
-
-        // The Audience of the token. Must match the value in the token for the token to be considered valid.
-        private static readonly string _clientGroupStaff = (ConfigurationManager.AppSettings["Staff"]);
-        private static readonly string _clientGroupManagement = (ConfigurationManager.AppSettings["Management"]);
-
-        //The Video Files that you want to use 
-        private static readonly string _staffVideoFile = ConfigurationManager.AppSettings["StaffVideoFile"];
-        private static readonly string _mgmtVideoFile = ConfigurationManager.AppSettings["ManagementVideoFile"];
-        private static readonly string _upload = ConfigurationManager.AppSettings["Upload"];
+        public static readonly Action<string> log = (msg) => Console.Out.WriteLine(msg);
 
         static void Main(string[] args)
         {
-            Initialize();
-            SelectMediaServicesAccount();
-
-            //Upload assets or use existing ones
-            IAsset assetStaff;
-            IAsset assetManagement;
-
-            if (_upload == "true")
-            {
-                assetStaff = UploadFileAndCreateAsset(_staffVideoFile); //Upload Asset 1
-                assetManagement = UploadFileAndCreateAsset(_mgmtVideoFile); //Upload Asset 2
-            }
-            else
-            { //Or use already existing assets (specify the ID of the asset in your app.config, e.g. StaffVideoFile = "nb:cid:UUID:8e7255dd-39cf-4b61-b578-74aa279ecba1"
-                assetStaff = GetAsset(_staffVideoFile);
-                assetManagement = GetAsset(_mgmtVideoFile);
-            }
-
-            //Encode Assets
-            IAsset encodedassetStaff = EncodeToAdaptiveBitrateMP4s(assetStaff);
-            IAsset encodedassetManagement = EncodeToAdaptiveBitrateMP4s(assetManagement);
-
-            //Setup AES 128 Encryption for my assets
-            var guidKey = SetupAESEncryption(encodedassetStaff, _clientGroupStaff);
-            var guidKey2 = SetupAESEncryption(encodedassetManagement, _clientGroupManagement);
-
-            //Publish Videos & Create Locators
-            PublishAssetGetURLs(encodedassetStaff, _clientGroupStaff, guidKey);
-            PublishAssetGetURLs(encodedassetManagement, _clientGroupManagement, guidKey2);
-
-            //Save Videos in my local Json "Database"
-            SaveAssetsinDB();
-        }
-
-        private static void Initialize()
-        {
             Console.Title = "Azure Media Services Setup";
-            _videoDB = new VideoDB();
-            _videoDB.videos = new List<Video>();
-        }
+            Func<string, string> env = k => Environment.GetEnvironmentVariable(k);
+            Func<string, string> appconfig = k => ConfigurationManager.AppSettings[k];
 
-        /// <summary>
-        /// 
-        /// </summary>
-        static void SelectMediaServicesAccount()
-        {
+            var videosToEncode = new List<VideoToPublish>
+            {
+                new VideoToPublish { Filename = @"..\..\..\ams101.mp4", Audience = "Staff" },
+                new VideoToPublish { Filename = @"..\..\..\ams102.mp4", Audience = "Management" }
+            };
+
+            var settings = new Settings
+            {
+                Issuer = appconfig("Issuer"),
+                primaryVerificationKey = Convert.FromBase64String(appconfig("PrimaryVerificationKey"))
+            };
+            
+            //Setup Azuer Media Services Account
+            var context = new CloudMediaContext(new MediaServicesCredentials(
+                clientId: env("AMSACCNAME"), 
+                clientSecret: env("AMSACCOUNTKEY")));
+
+            //Upload your videos, encode a
+            Func<VideoToPublish, Task<Video>> UploadAndEncodeAsync = async (videoToPublish) =>
+            {
+                //Upload Video (mezzanine) and create Asset or use existing Asset
+                var mezzanineAsset = await UploadFileAndCreateAssetOrUseExistingAsync(
+                    context: context,
+                    fileName: videoToPublish.Filename);
+
+                //Encode Asset
+                var encodedAsset = await EncodeToAdaptiveBitrateMP4sAsync(
+                    context: context, 
+                    asset: mezzanineAsset);
+
+                //Setup AES 128 Encryption for my assets
+                var guidKey = await SetupAESEncryptionAsync(
+                    context: context,
+                    settings: settings,
+                    encodedAsset: encodedAsset,
+                    audience: videoToPublish.Audience);
+
+                //Publish Videos & Create Locators
+                return await PublishAssetGetURLsAsync(
+                    context: context,
+                    asset: encodedAsset,
+                    audience: videoToPublish.Audience,
+                    guid: guidKey,
+                    primaryVerificationKey: settings.primaryVerificationKey);
+            };
+
+            var allTasks = videosToEncode.Select(UploadAndEncodeAsync).ToArray();
             try
             {
-                _cachedCredentials = new MediaServicesCredentials(_mediaServicesAccountName, _mediaServicesAccountKey); // Create and cache the Media Services credentials in a static class variable.
-                _context = new CloudMediaContext(_cachedCredentials);  // Used the chached credentials to create CloudMediaContext.
+                Task.WaitAll(allTasks); //Wait for everything to be completed
             }
-            catch (Exception exception)
+            catch (AggregateException e)
             {
-                exception = MediaServicesExceptionParser.Parse(exception);
-                Console.Error.WriteLine(exception.Message);
+                Console.WriteLine("\nThe following exceptions have been thrown by WaitAll(): (THIS WAS EXPECTED)");
+                for (int j = 0; j < e.InnerExceptions.Count; j++)
+                {
+                    Console.WriteLine("\n-------------------------------------------------\n{0}", e.InnerExceptions[j].ToString());
+                }
             }
-            finally
-            {
-                Console.Out.WriteLine("Successfully set up your Media Services Account.");
-            }
+
+
+            //Save upload, encoded and decrypted videos in your Video Database! 
+
+            var videoDB = new VideoDB(allTasks.Select(_ => _.Result));
+            videoDB.Save(path: @"..\..\..\VideoDatabase.json");
         }
 
-        /// <summary>
-        ///  Option StorageEncrypted is needed for AES Encryption
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
-        static public IAsset UploadFileAndCreateAsset(string fileName)
+        static public async Task<IAsset> UploadFileAndCreateAssetOrUseExistingAsync(CloudMediaContext context, string fileName)
         {
-            IAsset inputAsset = _context.Assets.CreateFromFile(fileName, AssetCreationOptions.None, (af, p) => { Console.WriteLine("Uploading '{0}' - Progress: {1:0.##}%", af.Name, p.Progress); });
-            Console.WriteLine("Asset with ID: {0} and name: {1} created.", inputAsset.Id, inputAsset.Name);
+            var name = new FileInfo(fileName).Name;
+
+            //Check if an Asset with this name is already existant and if yes, return it
+            var inputAsset = context.Assets.Where(_ => _.Name == name).FirstOrDefault();
+            if (inputAsset != null)
+            {
+                return inputAsset;
+            }
+
+            //Asset not existant -> Upload it! And output status to console 
+            //Action<IAssetFile, UploadProgressChangedEventArgs> log = (af, p) => Program.log($"Uploading '{af.Name}' - Progress: {string.Format("0:0.##}%", p.Progress)}");
+
+            inputAsset = await context.Assets.CreateFromFileAsync(
+                filePath: fileName,
+                options: AssetCreationOptions.None,
+                //uploadProgressChangedCallback: log,
+                cancellationToken: new CancellationTokenSource().Token);
+            Program.log($"Asset with ID: {inputAsset.Id} and name: {inputAsset.Name} created.");
+
             return inputAsset;
         }
 
-        static public IAsset EncodeToAdaptiveBitrateMP4s(IAsset asset)
+        static public async Task<IAsset> EncodeToAdaptiveBitrateMP4sAsync(CloudMediaContext context, IAsset asset)
         {
-            AssetCreationOptions options = AssetCreationOptions.None; //StorageEncrypted;
+            //Is the asset already encoded? Then return it! 
+            var outputAssetName = $"{asset.Name}_Adaptive Bitrate MP4";
+            var outputAsset = context.Assets.Where(_ => _.Name == outputAssetName).FirstOrDefault();
+            if (outputAsset != null)
+            {
+                return outputAsset;
+            }
 
             // Prepare a job with a single task to transcode the specified asset into a multi-bitrate asset.
-            IJob job = _context.Jobs.CreateWithSingleTask("Media Encoder Standard", "H264 Multiple Bitrate 720p", asset, (asset.Name + "_Adaptive Bitrate MP4"), options);
-            Console.WriteLine("Submitting transcoding job...");
+            IJob job = context.Jobs.CreateWithSingleTask(
+                mediaProcessorName: "Media Encoder Standard",
+                taskConfiguration: "H264 Multiple Bitrate 720p",
+                inputAsset: asset,
+                outputAssetName: outputAssetName,
+                outputAssetOptions: AssetCreationOptions.None); 
 
             // Submit the job and wait until it is completed.
+            Program.log("Submitting transcoding job...");
             job.Submit();
-            job = job.StartExecutionProgressTask(j => { Console.WriteLine("Job state: {0}", j.State); Console.WriteLine("Job progress: {0:0.##}%", j.GetOverallProgress()); }, CancellationToken.None).Result;
-            Console.WriteLine("Transcoding job finished.");
 
-            IAsset outputAsset = job.OutputMediaAssets[0];
-            return outputAsset;
+            Action<IJob> printDebugInfo = (j) =>
+            {
+                Program.log($"Job state: {j.State}");
+                Program.log($"Job progress: {j.GetOverallProgress()}%");
+            };
+            job = await job.StartExecutionProgressTask(printDebugInfo, CancellationToken.None);
+            Program.log("Transcoding job finished.");
+
+            return job.OutputMediaAssets[0];
         }
 
-        static public void PublishAssetGetURLs(IAsset asset, string clientGroup, Guid guid)
+        static public async Task<Video> PublishAssetGetURLsAsync(IAsset asset, CloudMediaContext context, string audience, Guid guid, byte[] primaryVerificationKey)
         {
-            // Publish the output asset by creating an Origin locator for adaptive streaming, and a SAS locator for progressive download.
-            ILocator streamingLocator = _context.Locators.Create(LocatorType.OnDemandOrigin, asset, AccessPermissions.Read, TimeSpan.FromDays(30));
-            ILocator sasLocator = _context.Locators.Create(LocatorType.Sas, asset, AccessPermissions.Read, TimeSpan.FromDays(30));
-            Console.WriteLine("Created Locators for asset {0}.", asset.Name);
-            IEnumerable<IAssetFile> mp4AssetFiles = asset.AssetFiles.ToList().Where(af => af.Name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase));
+            var defaultDuration = TimeSpan.FromDays(30);
+
+            var locators = context.Locators
+                .Where(locator => locator.AssetId == asset.Id)
+                .ToList();
+
+            var streamingLocator = locators.FirstOrDefault(locator => locator.Type == LocatorType.OnDemandOrigin);
+            if (streamingLocator == null)
+            {
+                await context.Locators.CreateAsync(
+                    locatorType: LocatorType.OnDemandOrigin,
+                    asset: asset, 
+                    permissions: AccessPermissions.Read, 
+                    duration: defaultDuration);
+
+                Program.log($"Created OnDemandOrigin locator for asset {asset.Name}.");
+            }
+
+            var sasLocator = locators.FirstOrDefault(locator => locator.Type == LocatorType.Sas);
+            if (sasLocator == null)
+            {
+                await context.Locators.CreateAsync(
+                    locatorType: LocatorType.Sas,
+                    asset: asset, 
+                    permissions: AccessPermissions.Read, 
+                    duration: defaultDuration);
+
+                Program.log($"Created Sas locator for asset {asset.Name}.");
+            }
 
             // Get a reference to the streaming manifest file from the collection of files in the asset. 
             var manifestFile = asset.AssetFiles.Where(f => f.Name.ToLower().EndsWith(".ism")).FirstOrDefault();
 
             //Create a new video object to save the uris 
-            Video video = new Video
+            return new Video
             {
+                VideoTitle = asset.Name,
                 key = guid,
-                primaryVerificationKey = _primaryVerificationKey, 
+                primaryVerificationKey = Convert.ToBase64String(primaryVerificationKey),
                 id = asset.Id,
-                allowedClientGroup = clientGroup,
+                allowedClientGroup = audience,
                 filename = asset.Name,
                 assetFile = asset.GetManifestAssetFile().GetSasUri().ToString(),
                 manifest = streamingLocator.Path + manifestFile.Name + "/manifest",
                 hlsUri = asset.GetHlsUri(),
                 smoothStreamingUri = asset.GetSmoothStreamingUri(),
                 mpegdashUri = asset.GetMpegDashUri()//,
-                //progressiveDownloadUris = mp4AssetFiles.Select(af => af.GetSasUri()).ToList()
+                //progressiveDownloadUris = asset.AssetFiles.Where(af => af.Name.ToLower().EndsWith(".mp4")).Select(af => af.GetSasUri()).ToList()
             };
-            _videoDB.videos.Add(video);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="videos"></param>
-        private static void SaveAssetsinDB()//VideoDB[] videos)
-        {
-            string filename = "C:/Users/juliajau/documents/visual studio 2015/Projects/AzureMediaServicesProject/AMSsetup/AppData/VideoDatabase.json";
-            var json = JsonConvert.SerializeObject(_videoDB);
-            File.WriteAllText(filename, json);
-        }
 
-        static IAsset GetAsset(string assetId)
+        static IAsset GetAsset(CloudMediaContext context, string assetId)
         {
-            var assetInstance = from a in _context.Assets where a.Id == assetId select a;
+            var assetInstance = from a in context.Assets where a.Id == assetId select a;
             IAsset asset = assetInstance.FirstOrDefault();
             return asset;
         }
 
         //Encryption Stuff
 
-        private static Guid SetupAESEncryption(IAsset encodedAsset, string clientGroup)
+        private static async Task<Guid> SetupAESEncryptionAsync(CloudMediaContext context, IAsset encodedAsset,  string audience, Settings settings)
         {
             //1.Create a content key and associate it with the encoded asset 
-            IContentKey key = CreateEnvelopeTypeContentKey(encodedAsset);
-            Console.WriteLine("Created key {0} for the asset {1} ", key.Id, encodedAsset.Id);
-            Console.WriteLine();
+            IContentKey key = CreateEnvelopeTypeContentKey(encodedAsset, context);
+            Program.log($"Created key {key.Id} for the asset {encodedAsset.Id}");
 
             //2.Configure the content keys authorization policy (How do you get the encryption key: Token/IP/Open)
             // True => you need a claim in your JWT Token specifying the key id guid 
-            string tokenTemplateString = AddTokenRestrictedAuthorizationPolicy(key, clientGroup, true);
-            Console.WriteLine("Added authorization policy: {0}", key.AuthorizationPolicyId);
-            Console.WriteLine();
+            string tokenTemplateString = await AddTokenRestrictedAuthorizationPolicy(
+                context: context,
+                contentKey: key,
+                audience: audience,
+                contentKeyIdentifierClaim: true,
+                issuer: settings.Issuer,
+                primaryVerificationKey: settings.primaryVerificationKey);
+
+            Program.log($"Added authorization policy: {key.AuthorizationPolicyId}");
 
             //3.Create Asset Delivery Policy (Dynamic or non-dynamic Encryption)
-            CreateAssetDeliveryPolicy(encodedAsset, key);
+            CreateAssetDeliveryPolicy(encodedAsset, key, context);
             Console.WriteLine("Created asset delivery policy. \n");
             Console.WriteLine();
 
@@ -215,64 +261,87 @@ namespace AMSsetup
             return rawkey;
         }
         
-        static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset)
+        static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset, CloudMediaContext context)
         {
-            // Create envelope encryption content key
-            Guid keyId = Guid.NewGuid();
-            byte[] contentKey = GetRandomBuffer(16);
+            IContentKey contentKey = asset.ContentKeys.FirstOrDefault(k => k.ContentKeyType == ContentKeyType.EnvelopeEncryption);
 
-            // Associate the key with the asset
-            IContentKey key = _context.ContentKeys.Create(keyId, contentKey, "ContentKey", ContentKeyType.EnvelopeEncryption);
-            asset.ContentKeys.Add(key);  
+            // Create envelope encryption content key & Associate the key with the asset
+            if (contentKey == null)
+            {
+                contentKey = context.ContentKeys.Create(
+                    keyId: Guid.NewGuid(),
+                    contentKey: GetKeyBytes(16),
+                    name: "ContentKey",
+                    contentKeyType: ContentKeyType.EnvelopeEncryption);
 
-            return key;
+                asset.ContentKeys.Add(contentKey);
+            }
+
+            return contentKey;
         }
 
-        public static string AddTokenRestrictedAuthorizationPolicy(IContentKey contentKey, string clientGroup, bool contentKeyIdentifierClaim)
+        private static byte[] GetKeyBytes(int size)
         {
-            string tokenTemplateString = GenerateTokenRequirements(clientGroup, contentKeyIdentifierClaim);
-
-            IContentKeyAuthorizationPolicy policy = _context.ContentKeyAuthorizationPolicies.CreateAsync("HLS token restricted authorization policy").Result;
-            List<ContentKeyAuthorizationPolicyRestriction> restrictionList = new List<ContentKeyAuthorizationPolicyRestriction>();
-
-            ContentKeyAuthorizationPolicyRestriction myrestriction = new ContentKeyAuthorizationPolicyRestriction
+            var randomBytes = new byte[size];
+            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
             {
+                rng.GetBytes(randomBytes);
+            }
+
+            return randomBytes;
+        }
+
+        public static async Task<string> AddTokenRestrictedAuthorizationPolicy(CloudMediaContext context, IContentKey contentKey, string issuer, string audience,  bool contentKeyIdentifierClaim, byte[] primaryVerificationKey)
+        {
+            string tokenTemplateString = GenerateTokenRequirements(
+                issuer: issuer, 
+                audience: audience, 
+                contentKeyIdentifierClaim: contentKeyIdentifierClaim,
+                primaryVerificationKey: primaryVerificationKey);
+
+            IContentKeyAuthorizationPolicy policy = await context.ContentKeyAuthorizationPolicies.CreateAsync(name: "Token restricted authorization policy");
+            List<ContentKeyAuthorizationPolicyRestriction> restrictionList = new List<ContentKeyAuthorizationPolicyRestriction>
+            {
+                new ContentKeyAuthorizationPolicyRestriction
+                {
                         Name = "Token Authorization Policy",
                         KeyRestrictionType = (int)ContentKeyRestrictionType.TokenRestricted,
                         Requirements = tokenTemplateString
+                }
             };
-            restrictionList.Add(myrestriction);
 
-            //You could have multiple options 
-            //BaselineHttp specifies that we use the AES key server from AMS 
-            IContentKeyAuthorizationPolicyOption policyOption = _context.ContentKeyAuthorizationPolicyOptions.Create("Token Authorization policy option",  ContentKeyDeliveryType.BaselineHttp, restrictionList, null);  // no key delivery data is needed for HLS                                     
+            //You could have multiple options; BaselineHttp specifies that we use the AES key server from AMS 
+            IContentKeyAuthorizationPolicyOption policyOption = context.ContentKeyAuthorizationPolicyOptions.CreateAsync(
+                name: "Token Authorization policy option", 
+                deliveryType: ContentKeyDeliveryType.BaselineHttp, 
+                restrictions: restrictionList,
+                keyDeliveryConfiguration: null).Result;  // no key delivery data is needed for HLS                                     
+
             policy.Options.Add(policyOption);
 
             // Add ContentKeyAutorizationPolicy to ContentKey
             contentKey.AuthorizationPolicyId = policy.Id;
-            IContentKey updatedKey = contentKey.UpdateAsync().Result;
-            
-            Console.WriteLine("Adding Key to Asset: Key ID is " + updatedKey.Id);
+            IContentKey updatedKey = await contentKey.UpdateAsync();
+            Program.log($"Adding Key to Asset: Key ID is {updatedKey.Id}");
 
             return tokenTemplateString;
         }
 
-        static private string GenerateTokenRequirements(string clientGroup, bool contentKeyIdentifierClaim)
+        static private string GenerateTokenRequirements(string issuer, string audience, bool contentKeyIdentifierClaim, byte[] primaryVerificationKey)
         {
-            TokenRestrictionTemplate template = new TokenRestrictionTemplate(TokenType.JWT);
-            template.PrimaryVerificationKey = new SymmetricVerificationKey(Convert.FromBase64String(_primaryVerificationKey));
-            template.Issuer = _sampleIssuer.ToString();
-
-            if (clientGroup == _clientGroupStaff)
-                template.Audience = _clientGroupStaff;
-            else if (clientGroup == _clientGroupManagement)
-                template.Audience = _clientGroupManagement;
+            var template = new TokenRestrictionTemplate(TokenType.JWT)
+            {
+                PrimaryVerificationKey = new SymmetricVerificationKey(primaryVerificationKey),
+                Issuer = issuer,
+                Audience = audience
+            };
             
             if (contentKeyIdentifierClaim)
                 template.RequiredClaims.Add(TokenClaim.ContentKeyIdentifierClaim);
 
+            //You can create a test token, useful to debug your final token if anything is not working as you want
             string testToken = TokenRestrictionTemplateSerializer.GenerateTestToken(template);
-            Console.WriteLine("The authorization token is:\nBearer {0}", testToken);
+            Program.log($"The authorization token is: Bearer {testToken}");
 
             return TokenRestrictionTemplateSerializer.Serialize(template);
         }
@@ -292,38 +361,33 @@ namespace AMSsetup
         /// </summary>
         /// <param name="asset"></param>
         /// <param name="key"></param>
-        static public void CreateAssetDeliveryPolicy(IAsset asset, IContentKey key)
+        static public async void CreateAssetDeliveryPolicy(IAsset asset, IContentKey key, CloudMediaContext context)
         {
-            //Where do I get the Encrytion Key?
-            Uri keyAcquisitionUri = key.GetKeyDeliveryUrl(ContentKeyDeliveryType.BaselineHttp);
+            Uri keyAcquisitionUri = await key.GetKeyDeliveryUrlAsync(ContentKeyDeliveryType.BaselineHttp);
 
             // Removed in March 2016.In order to use EnvelopeBaseKeyAcquisitionUrl and reuse the same policy for several assets
             //string envelopeEncryptionIV = Convert.ToBase64String(GetRandomBuffer(16));
 
-            Dictionary<AssetDeliveryPolicyConfigurationKey, string> assetDeliveryPolicyConfiguration = new Dictionary<AssetDeliveryPolicyConfigurationKey, string> {
-                { AssetDeliveryPolicyConfigurationKey.EnvelopeKeyAcquisitionUrl, keyAcquisitionUri.ToString()}};
+            const string assetDeliveryPolicyName = "AssetDeliveryPolicy for HLS, SmoothStreaming and MPEG-DASH";
+            IAssetDeliveryPolicy assetDeliveryPolicy = context.AssetDeliveryPolicies
+                .Where(p => p.Name == assetDeliveryPolicyName)
+                .ToList().FirstOrDefault();
 
-            IAssetDeliveryPolicy assetDeliveryPolicy = _context.AssetDeliveryPolicies.Create(
-                "AssetDeliveryPolicy for HLS, SmoothStreaming and MPEG-DASH",
-                AssetDeliveryPolicyType.DynamicEnvelopeEncryption,
-                AssetDeliveryProtocol.SmoothStreaming | AssetDeliveryProtocol.HLS | AssetDeliveryProtocol.Dash,
-                assetDeliveryPolicyConfiguration);
-
-            // Add AssetDelivery Policy to the asset
-            asset.DeliveryPolicies.Add(assetDeliveryPolicy);
-
-            Console.WriteLine("Adding Asset Delivery Policy: " + assetDeliveryPolicy.AssetDeliveryPolicyType);
-        }
-
-        static private byte[] GetRandomBuffer(int size)
-        {
-            byte[] randomBytes = new byte[size];
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+            if (assetDeliveryPolicy == null)
             {
-                rng.GetBytes(randomBytes);
+                assetDeliveryPolicy = await context.AssetDeliveryPolicies.CreateAsync(
+                    name: assetDeliveryPolicyName,
+                    policyType: AssetDeliveryPolicyType.DynamicEnvelopeEncryption,
+                    deliveryProtocol: AssetDeliveryProtocol.SmoothStreaming | AssetDeliveryProtocol.HLS | AssetDeliveryProtocol.Dash,
+                    configuration: new Dictionary<AssetDeliveryPolicyConfigurationKey, string> {
+                        { AssetDeliveryPolicyConfigurationKey.EnvelopeKeyAcquisitionUrl, keyAcquisitionUri.AbsoluteUri }
+                    });
+
+                // Add AssetDelivery Policy to the asset
+                asset.DeliveryPolicies.Add(assetDeliveryPolicy);
             }
 
-            return randomBytes;
+            Program.log("Adding Asset Delivery Policy: " + assetDeliveryPolicy.AssetDeliveryPolicyType);
         }
     }
 }

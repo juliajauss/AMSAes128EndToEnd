@@ -1,13 +1,31 @@
-﻿
-using System;
-using System.Collections.Generic;
-
-namespace IdentityServerAPI.Models
+﻿namespace CMS.Models
 {
+    using Newtonsoft.Json;
+    using System.Collections.Generic;
+    using System.IO;
 
     public class VideoDB
     {
-        public List<Video> videos { get; set;  }
+        public List<Video> videos { get; set; } = new List<Video>();
+
+        public VideoDB() { }
+        public VideoDB(IEnumerable<Video> videos)
+        {
+
+            this.videos.AddRange(videos);
+        }
+
+        public void Save(string path)
+        {
+            var json = JsonConvert.SerializeObject(this);
+            File.WriteAllText(path, json);
+        }
+
+        public static VideoDB LoadFromFile(string filename)
+        {
+            var jsonText = File.ReadAllText(filename);
+            return JsonConvert.DeserializeObject<VideoDB>(jsonText);
+        }
     }
 
     public class Video

@@ -1,38 +1,33 @@
-﻿using System.Collections.Generic;
-using Microsoft.AspNetCore.Mvc;
-using IdentityServerAPI.Models;
-using Newtonsoft.Json;
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-
-// For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
-
-namespace IdentityServerAPI.Controllers
+﻿namespace CMS.Controllers
 {
+    using Microsoft.AspNetCore.Mvc;
+    using CMS.Models;
+    using Microsoft.AspNetCore.Http;
+    using Newtonsoft.Json.Linq;
+    using System.Linq;
+
     [Route("video")]
     public class VideoController : Controller
     {
-        // GET: /<controller>/
-        public async Task<IActionResult> Index()//List<string> clientGroups)
-        {
-            var clientGroup = VerifyUserAndGetClientGroup();
-            if (clientGroup == "")
-                return Unauthorized(); // View("~/Views/Home.cshtml");
+        private static string DataBaseFilename { get { return @"..\VideoDatabase.json"; } }
+        //C:\Users\juliajau\documents\visual studio 2015\VideoDatabase.json'.
 
-            //Generate a JWT Token for the client regarding the users groups 
-            //(A "normal employee" has different rights than a management employee and should get access to different videos)
-            JWTHelper jwthelper = new JWTHelper(clientGroup);
-            var videos = jwthelper.GetVideos();
+        // GET: /<controller>/
+        public IActionResult Index()
+        {
+            var audience = VerifyUserAndGetClientGroup();
+            if (audience == "")
+                return Unauthorized();
+
+            //Generate a JWT Token for the client regarding the users groups (Audience: A "normal employee" has different rights than a management employee and should get access to different videos)
+            JWTHelper jwthelper = new JWTHelper();
+            var videos = jwthelper.GetVideos(DataBaseFilename, audience);
 
             //I have only one video per clientGroup
-            var video = videos[0];
+            var video = videos.First();
 
             //Decrypt all Videos the client has access to 
-            var token = await jwthelper.DecryptVideo(video);
+            var token = jwthelper.CreateJWTToken(video);
 
             ViewBag.JWTToken = token; 
             ViewBag.VideoURL = video.manifest;
@@ -45,13 +40,13 @@ namespace IdentityServerAPI.Controllers
             //Normally you should very the auth token etc. but for demo purposes I just do this 
             var content = HttpContext.Session.GetString("httpResponseContent");
             var contentArray = JArray.Parse(content);
-            string clientGroup = "";
+            string audience = "";
             foreach (JObject con in contentArray.Children<JObject>())
             {
                 if (con.Properties().First().Value.ToString() == "client_Group")
-                    clientGroup = con.Properties().ElementAt(1).Value.ToString();
+                    audience = con.Properties().ElementAt(1).Value.ToString();
             }
-            return clientGroup;
+            return audience;
 
         }
     }

@@ -1,19 +1,13 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using IdentityServerAPI.Models;
-using IdentityModel.Client;
-using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Security.Principal;
-using System.Threading;
-using Microsoft.AspNetCore.Http;
-
-namespace IdentityServerAPI.Controllers
+﻿namespace CMS.Controllers
 {
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Mvc;
+    using System.Net.Http;
+    using System.Diagnostics;
+    using Microsoft.AspNetCore.Http;
+    using Models;
+    using IdentityModel.Client;
+
     [Route("home")]
     public class HomeController : Controller
     {
@@ -51,14 +45,11 @@ namespace IdentityServerAPI.Controllers
             client.SetBearerToken(tokenResponse.AccessToken);
             var response = await client.GetAsync("http://localhost:22943/identity");
 
-            //Determine the group of the user. Is the user a "normal" employee or in the management?
-            //var clientGroup = GetGroupOfClient(response);
-
             var content = response.Content.ReadAsStringAsync().Result;
             HttpContext.Session.SetString("httpResponseContent", content);
 
             // Call video page of CMS
-            return RedirectToAction("Index", "Video"); //, new { clientGroups = clientGroup });
+            return RedirectToAction("Index", "Video");
         }
 
 

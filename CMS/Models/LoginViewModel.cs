@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace IdentityServerAPI.Models
+namespace CMS.Models
 {
      public class LoginViewModel
     {
