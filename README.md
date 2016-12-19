@@ -77,5 +77,5 @@ What is happening inside?
   * Create JWT Token. It is used to get the decryption key of the video.
   * Client can see videos regarding his role (staff|management). 
 
-![alt tag](https://github.com/juliajauss/AMSAes128EndToEnd/overview.png)
+![Overview](https://github.com/juliajauss/AMSAes128EndToEnd/blob/master/overview.png)
 
