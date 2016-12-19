@@ -1,6 +1,6 @@
 # A self-contained Azure Media Service (AMS) End-to-End Szenario with Dynamic AES 128 Encryption
 
-This repository contains a end-to-end solution to show how Dynamic AES 126 encryption works within a single Visual Studio Solution. 
+This repository contains a end-to-end solution to show how dynamic AES 126 encryption works within a single Visual Studio Solution. 
 
 **You will find 3 projects in the project:**
 
@@ -19,77 +19,63 @@ This repository contains a end-to-end solution to show how Dynamic AES 126 encry
    This project is to setup your Azure Media Services Account: upload your videos as assets, encode them and specify the encryption details for the assets.  
 
 ## Setup
-**You need to customize these things to run this demo:**
 
-1. Navigate to the **AMS-Setup** project, open the **"App.config"** file and insert your Azure Media Service credentials. Run AMS Setup. 
-```xml
-   <appSettings>
-    <add key="MediaServicesAccountName" value="<name-of-your-AzureMediaServices-account, e.g. juliasmediaservice" />
-    <add key="MediaServicesAccountKey" value="<your-AzureMediaServices-AccountKey" />
-    <add key="StaffVideoFile" value ="<path-to-the-video-or-asset-id"/>
-    <add key="ManagementVideoFile" value ="<path-to-the-video-or-asset-id"/>
-    <add key="Issuer" value="http://localhost:5000/identity" />  //This is the URL of your Identity Provider, in this case the IdentitiyServer 
-    <add key="Staff" value="Staff" /> 
-    <add key="Management" value="Management" />
-    <add key ="PrimaryVerificationKey" value="yLUn9dp8IGeosxy14Com0nUt5Wvi/YLV48agTlPoWAFMcH2dvAh307UX7Pi0tS5W4vS85OcqTAfuVvVFjNfybg=="/>
-    <add key="ClientSettingsProvider.ServiceUri" value="" />
-  </appSettings> 
-```
-
+1. **Download two videos:** Navigate to the folder **Solution Items** and just run **"Download_Videos.cmd"**. This will download two different Azure Media Services videos that will be uploaded to your AMS account. 
    
-2. Specify CMS and ADFS-Mockup as Startup Projects and click Start. 
+2. In the folder **Solution Items**, set your own Azure Media Services account details in the **"Setup_Environment.cmd"** and run it. 
 
-3. Take a look at how authentication goes :) 
+3. Specify **AMSsetup** as startup project and run it. 
+
+4. Specify **CMS** and **ADFS-Mockup** as Startup Projects and run the solution. 
+
+5. Take a look at how authentication goes :) 
 
 
 ## What can I do?
-   Imagine a company "JJ & Rob Adventures". There you can book several adventures for your holidays, like diving, paragliding, sailing, ..and so on. 
-   My CMS is an Intranet Application to show training videos to my employees. 
 
-   There are two types of employees in my company: "normal" staff - these are the instructors for the activities. Videos contain infos about Do's & Dont's e.g. don't go paragliding if it is stormy.
-   Management employees - managing the instructors and the company. Video contain infos about compliance, company goals and necessary reporting. 
-   Of course the "normal" staff should not be able to see the videos dedicated to the management. 
+   Imagine a company. The **CMS** is an intranet application to show training videos to my employees. 
+   There are two types of employees in my company: "normal" employees and employees who work in the management. The training content for the management is different, focusing on videos about compliance, company goals and reporting. 
+   The "normal" staff should not be able to see the videos dedicated to the management. 
 
    **To realize this, I created two clients in IdentityServer:**
 
    1. A "normal" employee, called **staff**. This employee can view all videos in the scope "Staff". 
     * Username: StaffName
     * Password: pdw1
-   2.  A employee working in the **management**. This employee can only view videos in the scope "Management". Of course you can configure the solution to show all videos to a employee in the management. 
+   2.  An employee working in the **management**. This employee can only view videos in the scope "Management".  
     * Username: ManagementName
     * Password: pwd2
 
 **You should recognize:**
 
- * You should see different Videos when you perform the Login to the CMS with the two different users. 
+ * You should see different videos when you perform the Login to the CMS with the two different users. 
  * If you copy the video URL while logged in as a Management employee and try to view it as Staff employee, you will get an error. 
     
 
 ## Explanation
 What is happening inside?
 
-1. AMSSetup
+**1. AMSSetup**
+
    * Upload your video files to AMS as assets or use existing assets via their id. 
    * Encode your assets. 
    * Setup the AES Encryption. [Here](https://docs.microsoft.com/en-us/azure/media-services/media-services-protect-with-aes128) you can find a detailed explanation.
  
 
-1. Client performs Log-in to the CMS:
+**2. Client performs Log-in to the CMS:**
+
   * Client wants to access the CMS. 
   * CMS redirects the Client to ADFS-Mockup (IdentitiyServer). 
-  * ADFS-Mockup verfies clientname and client credentials and if successful, sends a bearer token back to the client.
+  * ADFS-Mockup verfies clientname and client credentials. If successful, IdentityServer sends a bearer token back to the client.
   * Client uses Bearer Token to get access to the CMS. 
   * Client can see the video page. 
 
+**3. Decryption of the videos: Videos must be decrypted before the client can see them.**
 
-2. Decrypt the videos: Videos must be decrypted before the client can see them. 
-  * Determine the role (staff|management) of the client via his access token. 
+  * Determine the role (staff|management) of the client via the session. 
   * Query the video database to get all videos for the client's role (staff|management). 
-  * Foreach video: 
-    1. Fetch manifest 
-    2. Create JWT Token
+  * Create JWT Token. It is used to get the decryption key of the video.
   * Client can see videos regarding his role (staff|management). 
 
-
-
+![alt tag](https://github.com/juliajauss/AMSAes128EndToEnd/overview.png)
 

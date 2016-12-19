@@ -14,7 +14,6 @@
 
         //Logged-on user requests JWT for Azure Key Service
         //HMAC SHA-256 (symmetric key) or RSA SHA-256 (asymmetric key, x509 certificate)
-
         public string CreateJWTToken(Video video)
         {
             var audience = video.allowedClientGroup;

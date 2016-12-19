@@ -44,5 +44,4 @@
 
         //public List<Uri> progressiveDownloadUris { get; set; }
     }
-
 }
