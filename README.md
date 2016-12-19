@@ -2,6 +2,8 @@
 
 This repository contains a end-to-end solution to show how dynamic AES 126 encryption works within a single Visual Studio Solution. 
 
+![Overview](https://github.com/juliajauss/AMSAes128EndToEnd/blob/master/overview.png)
+
 **You will find 3 projects in the project:**
 
 1. **ADFS-Mockup**
@@ -48,7 +50,7 @@ This repository contains a end-to-end solution to show how dynamic AES 126 encry
 
 **You should recognize:**
 
- * You should see different videos when you perform the Login to the CMS with the two different users. 
+ * You should see different videos when you perform the login to the CMS with the two different users. (The videos of Azure Media Services are very similar, but in fact different.)
  * If you copy the video URL while logged in as a Management employee and try to view it as Staff employee, you will get an error. 
     
 
@@ -57,25 +59,24 @@ What is happening inside?
 
 **1. AMSSetup**
 
-   * Upload your video files to AMS as assets or use existing assets via their id. 
-   * Encode your assets. 
-   * Setup the AES Encryption. [Here](https://docs.microsoft.com/en-us/azure/media-services/media-services-protect-with-aes128) you can find a detailed explanation.
+   * Uploading of the video files to AMS as assets. Videos are also saved in the database mockup VideoDatabase.json. 
+   * Encoding of the assets. 
+   * Setup of the AES Encryption. [Here](https://docs.microsoft.com/en-us/azure/media-services/media-services-protect-with-aes128) you can find a detailed explanation.
  
 
-**2. Client performs Log-in to the CMS:**
+**2. Client performs Log-in to the CMS (Browser):**
 
-  * Client wants to access the CMS. 
-  * CMS redirects the Client to ADFS-Mockup (IdentitiyServer). 
-  * ADFS-Mockup verfies clientname and client credentials. If successful, IdentityServer sends a bearer token back to the client.
+  * Client wants to access the CMS with username and password.
+  * CMS redirects the client to ADFS-Mockup (IdentitiyServer). 
+  * ADFS-Mockup verfies username and client secret. If successful, IdentityServer returns a bearer token.
   * Client uses Bearer Token to get access to the CMS. 
-  * Client can see the video page. 
+  * Client get's access to the video page. The videos are encrypted.
 
 **3. Decryption of the videos: Videos must be decrypted before the client can see them.**
 
   * Determine the role (staff|management) of the client via the session. 
   * Query the video database to get all videos for the client's role (staff|management). 
-  * Create JWT Token. It is used to get the decryption key of the video.
+  * Create JWT Token. It is used to get the decryption key of the video from Azure Media Key Services.
   * Client can see videos regarding his role (staff|management). 
 
-![Overview](https://github.com/juliajauss/AMSAes128EndToEnd/blob/master/overview.png)
 
