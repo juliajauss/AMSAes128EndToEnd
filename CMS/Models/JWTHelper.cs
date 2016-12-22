@@ -16,7 +16,7 @@
         //HMAC SHA-256 (symmetric key) or RSA SHA-256 (asymmetric key, x509 certificate)
         public string CreateJWTToken(Video video)
         {
-            var audience = video.allowedClientGroup;
+            var audience = video.audience;
             var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(
                 key: Convert.FromBase64String(video.primaryVerificationKey)), 
                 algorithm: SecurityAlgorithms.HmacSha256);
@@ -39,7 +39,7 @@
         {
             return VideoDB
                 .LoadFromFile(dbFilename).videos
-                .Where(v => v.allowedClientGroup == audience);
+                .Where(v => v.audience == audience);
         }
     }
 }

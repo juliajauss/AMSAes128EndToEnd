@@ -1,6 +1,6 @@
 # A self-contained Azure Media Service (AMS) End-to-End Szenario with Dynamic AES 128 Encryption
 
-This repository contains a end-to-end solution to show how dynamic AES 126 encryption works within a single Visual Studio Solution. 
+This repository contains a end-to-end solution to show how dynamic AES 126 encryption works within a single Visual Studio Solution. You can find my blogpost [here](https://blogs.msdn.microsoft.com/juliajauss/2016/12/22/a-self-contained-azure-media-service-ams-end-to-end-szenario-with-dynamic-aes128-encryption/).
 
 ![Overview](https://github.com/juliajauss/AMSAes128EndToEnd/blob/master/overview.png)
 
@@ -35,8 +35,8 @@ This repository contains a end-to-end solution to show how dynamic AES 126 encry
 
 ## What can I do?
 
-   Imagine a company. The **CMS** is an intranet application to show training videos to my employees. 
-   There are two types of employees in my company: "normal" employees and employees who work in the management. The training content for the management is different, focusing on videos about compliance, company goals and reporting. 
+   Imagine a company. The **CMS** is an intranet application to show training videos to the employees. 
+   There are two types of employees in the company: "normal" employees and employees who work in the management. The training content for the management is different, focusing on videos about compliance, company goals and reporting. 
    The "normal" staff should not be able to see the videos dedicated to the management. 
 
    **To realize this, I created two clients in IdentityServer:**

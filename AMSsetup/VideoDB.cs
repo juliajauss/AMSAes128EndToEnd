@@ -32,7 +32,7 @@
         public string assetFile { get; set; }
         public string manifest { get; set; }
         public object VideoTitle { get; set; }
-        public string allowedClientGroup { get; set; }
+        public string audience { get; set; }
         public string id { get; set; }
         public string filename { get; set; }
         public object hlsUri { get; set; }

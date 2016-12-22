@@ -47,15 +47,14 @@
                 primaryVerificationKey = Convert.FromBase64String(appconfig("PrimaryVerificationKey"))
             };
             
-            //Setup Azuer Media Services Account
+            //Setup Azure Media Services Account
             var context = new CloudMediaContext(new MediaServicesCredentials(
                 clientId: env("AMSACCNAME"), 
                 clientSecret: env("AMSACCOUNTKEY")));
 
-            //Upload your videos, encode a
             Func<VideoToPublish, Task<Video>> UploadAndEncodeAsync = async (videoToPublish) =>
             {
-                //Upload Video (mezzanine) and create Asset or use existing Asset
+                //Upload video (mezzanine) and create asset (or use existing asset)
                 var mezzanineAsset = await UploadFileAndCreateAssetOrUseExistingAsync(
                     context: context,
                     fileName: videoToPublish.Filename);
@@ -201,7 +200,7 @@
                 key = guid,
                 primaryVerificationKey = Convert.ToBase64String(primaryVerificationKey),
                 id = asset.Id,
-                allowedClientGroup = audience,
+                audience = audience,
                 filename = asset.Name,
                 assetFile = asset.GetManifestAssetFile().GetSasUri().ToString(),
                 manifest = streamingLocator.Path + manifestFile.Name + "/manifest",
@@ -220,16 +219,13 @@
             return asset;
         }
 
-        //Encryption Stuff
-
         private static async Task<Guid> SetupAESEncryptionAsync(CloudMediaContext context, IAsset encodedAsset,  string audience, Settings settings)
         {
             //1.Create a content key and associate it with the encoded asset 
             IContentKey key = CreateEnvelopeTypeContentKey(encodedAsset, context);
             Program.log($"Created key {key.Id} for the asset {encodedAsset.Id}");
 
-            //2.Configure the content keys authorization policy (How do you get the encryption key: Token/IP/Open)
-            // True => you need a claim in your JWT Token specifying the key id guid 
+            //2.Configure the content keys authorization policy (How do you get the encryption key: Token/IP/Open) // True => you need a claim in your JWT Token specifying the key id guid 
             string tokenTemplateString = await AddTokenRestrictedAuthorizationPolicy(
                 context: context,
                 contentKey: key,
@@ -240,7 +236,7 @@
 
             Program.log($"Added authorization policy: {key.AuthorizationPolicyId}");
 
-            //3.Create Asset Delivery Policy (Dynamic or non-dynamic Encryption)
+            //3.Create Asset Delivery Policy (Dynamic or non-dynamic encryption)
             CreateAssetDeliveryPolicy(encodedAsset, key, context);
             Console.WriteLine("Created asset delivery policy. \n");
             Console.WriteLine();
@@ -252,8 +248,7 @@
             // Note, you need to pass the key id Guid because we specified TokenClaim.ContentKeyIdentifierClaim in during the creation of TokenRestrictionTemplate.
             Guid rawkey = EncryptionUtils.GetKeyIdAsGuid(key.Id);
 
-            //The GenerateTestToken method returns the token without the word “Bearer” in front
-            //so you have to add it in front of the token string. 
+            //The GenerateTestToken method returns the token without the word “Bearer” in front so you have to add it in front of the token string. 
             string testToken = TokenRestrictionTemplateSerializer.GenerateTestToken(tokenTemplate, null, rawkey);
             Console.WriteLine("The authorization token is:\nBearer {0}", testToken);
             Console.WriteLine();
@@ -263,6 +258,7 @@
         
         static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset, CloudMediaContext context)
         {
+            //Check if there is already a content key associated with the asset
             IContentKey contentKey = asset.ContentKeys.FirstOrDefault(k => k.ContentKeyType == ContentKeyType.EnvelopeEncryption);
 
             // Create envelope encryption content key & Associate the key with the asset
@@ -365,9 +361,6 @@
         {
             Uri keyAcquisitionUri = await key.GetKeyDeliveryUrlAsync(ContentKeyDeliveryType.BaselineHttp);
 
-            // Removed in March 2016.In order to use EnvelopeBaseKeyAcquisitionUrl and reuse the same policy for several assets
-            //string envelopeEncryptionIV = Convert.ToBase64String(GetRandomBuffer(16));
-
             const string assetDeliveryPolicyName = "AssetDeliveryPolicy for HLS, SmoothStreaming and MPEG-DASH";
             IAssetDeliveryPolicy assetDeliveryPolicy = context.AssetDeliveryPolicies
                 .Where(p => p.Name == assetDeliveryPolicyName)
@@ -380,7 +373,7 @@
                     policyType: AssetDeliveryPolicyType.DynamicEnvelopeEncryption,
                     deliveryProtocol: AssetDeliveryProtocol.SmoothStreaming | AssetDeliveryProtocol.HLS | AssetDeliveryProtocol.Dash,
                     configuration: new Dictionary<AssetDeliveryPolicyConfigurationKey, string> {
-                        { AssetDeliveryPolicyConfigurationKey.EnvelopeKeyAcquisitionUrl, keyAcquisitionUri.AbsoluteUri }
+                        { AssetDeliveryPolicyConfigurationKey.EnvelopeBaseKeyAcquisitionUrl, keyAcquisitionUri.AbsoluteUri }
                     });
 
                 // Add AssetDelivery Policy to the asset

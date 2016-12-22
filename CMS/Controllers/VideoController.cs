@@ -14,7 +14,7 @@
         // GET: /<controller>/
         public IActionResult Index()
         {
-            var audience = VerifyUserAndGetClientGroup();
+            var audience = VerifyUserAndDetermineAudience();
             if (audience == "")
                 return Unauthorized();
 
@@ -36,7 +36,7 @@
         /// Get the audience of the client using the session. 
         /// </summary>
         /// <returns></returns>
-        private string VerifyUserAndGetClientGroup()
+        private string VerifyUserAndDetermineAudience()
         {
             var content = HttpContext.Session.GetString("httpResponseContent");
             var contentArray = JArray.Parse(content);
